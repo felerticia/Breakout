@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+
+</head>
+<body>
+    <canvas id="canvas" width="600" height="600" style="background-color:black "></canvas>
+
+    <script>
+        let width = 600;
+        let height = 600;
+        let score = 0;
+        let lives = 4;
+        let scoreIncrement = 0;
+
+        const color = ["black","blue","yellow","pink","red"];
+
+        class Block{
+            constructor(x,y,life){
+                this.x = x;
+                this.y = y;
+                this.life = 1;
+                this.color = color[this.life];
+                this.width = 50;
+                this.height = 20;
+            }
+
+            collides (){
+                //TOP
+                if (ball.x >= this.x && ball.x <= this.x + this.width && ball.y + ball.r === this.y){
+                    ball.ydir *= -1;
+                    scoreIncrement++;
+                    updateScore(1);
+                    return true;
+                }
+                //BOTTOM
+                if (ball.x >= this.x && ball.x <= this.x + this.width && ball.y - ball.r === this.y + this.height){
+                    ball.ydir *= -1;
+                    scoreIncrement++;
+                    updateScore(1);
+                    return true;
+                }
+                //LEFT
+                if (ball.y >= this.y && ball.y <= this.y + this.height && ball.x + ball.r >= this.x  && ball.x - ball.r <= this.x + this.width){
+                    ball.xdir *= -1;
+                    scoreIncrement++;
+                    updateScore(1);
+                    return true;
+                }
+                //RIGHT
+                if (ball.y >= this.y && ball.y <= this.y + this.height && ball.x - ball.r <= this.x + this.width && ball.x + ball.r >= this.x ){
+                    ball.xdir *= -1; 
+                    scoreIncrement++;
+                    updateScore(1);
+                    return true;
+                }
+                return false;
+            }
+
+            update(){
+                return this.collides() ? --this.life : -1;
+            }
+
+            display (){
+                ctx.fillStyle=this.color;
+                ctx.fillRect(this.x,this.y,this.width,this.height); 
+            }
+        }
+
+        class Ball {
+            constructor(x,y,r){
+                this.x = x;
+                this.y = y;
+                this.r = r;
+                this.xdir = 2.5;
+                this.ydir = 2.5;
+                this.attached = true;
+            }
+
+            update(){
+                if (this.attached){
+                    this.x = player.x + player.width/2;
+                    this.y = player.y - this.r;
+                    this.xdir = this.xdir > 0 ? this.xdir : -1 * this.xdir;
+                    this.ydir = this.ydir < 0 ? this.ydir : -1 * this.ydir;
+                }
+                else{
+                    this.x += this.xdir;
+                    this.y += this.ydir;
+                    if (this.x + this.r > width || this.x - this.r < 0)
+                        this.xdir *=-1;
+                    if (this.y - this.r < 0)
+                        this.ydir *=-1;
+                    if (this.y + this.r > height){
+                        updateLife();
+                        this.attached = true;
+                    }
+                }
+            }
+
+
+            display(){
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.r, 0, 2 * Math.PI, false);
+                ctx.fillStyle = 'green';
+                ctx.fill();
+            }
+        }
+
+        class Player {
+            constructor(x,y){
+                this.x = x;
+                this.y = y;
+                this.color = color[0];
+                this.width = 50;
+                this.height = 20;
+            }
+            update(){
+                if (this.collides() && !ball.attached)
+                    scoreIncrement = 0;
+            }
+            display (){
+                ctx.fillStyle=this.color;
+                ctx.fillRect(this.x,this.y,this.width,this.height); 
+            }
+
+            collides (){
+                //TOP
+                if (ball.x >= this.x && ball.x <= this.x + this.width && ball.y + ball.r === this.y){
+                    ball.ydir *= -1;
+                    return true;
+                }
+            }
+
+
+        }
+
+        function clearBoard(){
+            ctx.fillStyle="#ccc";
+            ctx.fillRect(0,0,width,height); 
+        }
+
+        function updateScore(status){
+            if (status)
+                score += scoreIncrement*10;
+            else{
+                score = 0;
+                scoreIncrement = 0;
+            }
+        }
+
+        function updateLife(){
+            lives--;
+            if (lives == 0){
+                updateScore(0);
+                lives = 4;
+                buildBlox();
+            }
+        }
+
+
+
+
+        let blox = new Array(21);
+        (function buildBlox (){
+            for (let i = 0; i < blox.length; i++) {
+                blox[i] = new Block ((i*100 % width)+25 , Math.floor(i/7) * 100 + 25 , 1);
+            }
+        })();
+        let ball = new Ball (130, height/2 , 10);
+        let player = new Player (width/2 , height -20);
+
+        let counter = 0;
+        let canvas=document.getElementById("canvas");
+        let ctx=canvas.getContext("2d");
+
+        canvas.addEventListener("mousemove", (e) => {
+            player.x = e.pageX - 30;
+            player.x = player.x < 0 ? 0 : player.x;
+            player.x = player.x > width - player.width ? width - player.width : player.x;
+        });
+
+        canvas.addEventListener("click", () => {
+            if (ball.attached){
+                scoreIncrement = 0;
+                ball.update();
+                ball.attached = !ball.attached;
+            }
+        });
+
+
+        (function loop() {
+            clearBoard();
+            for (let i = blox.length -1 ; i>=0 ; i--)
+                if (blox[i].update() == 0)
+                    blox.splice(i,1);
+            for (let i = blox.length -1 ; i>=0 ; i--)
+                blox[i].display();
+            ball.update();
+            ball.display();
+            player.update();
+            player.display();
+            ctx.font = "20px Arial";
+            ctx.fillText("Score: "+ score,10,20); 
+            ctx.fillText("Lives: "+ lives,width-100,20); 
+
+            requestAnimationFrame(loop);
+        })();
+    </script>
+</body>
+</html>
